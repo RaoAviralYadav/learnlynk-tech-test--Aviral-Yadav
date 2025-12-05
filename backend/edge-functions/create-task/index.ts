@@ -1,7 +1,6 @@
-// LearnLynk Tech Test - Task 3: Edge Function create-task
-
-// Deno + Supabase Edge Functions style
-// Docs reference: https://supabase.com/docs/guides/functions
+// @ts-nocheck
+// This is a Deno Edge Function. These errors are expected in VS Code's TypeScript checker
+// which doesn't have Deno types. The code will run correctly in Deno/Supabase Edge Functions.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -31,36 +30,87 @@ serve(async (req: Request) => {
     const body = (await req.json()) as Partial<CreateTaskPayload>;
     const { application_id, task_type, due_at } = body;
 
-    // TODO: validate application_id, task_type, due_at
-    // - check task_type in VALID_TYPES
-    // - parse due_at and ensure it's in the future
+    // Validate required fields
+    if (!application_id || !task_type || !due_at) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: application_id, task_type, due_at" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // TODO: insert into tasks table using supabase client
+    // Validate task_type
+    if (!VALID_TYPES.includes(task_type)) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Invalid task_type. Must be one of: ${VALID_TYPES.join(", ")}` 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // Example:
-    // const { data, error } = await supabase
-    //   .from("tasks")
-    //   .insert({ ... })
-    //   .select()
-    //   .single();
+    // Validate due_at is a valid date and in the future
+    const dueDate = new Date(due_at);
+    if (isNaN(dueDate.getTime())) {
+      return new Response(
+        JSON.stringify({ error: "Invalid due_at timestamp" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // TODO: handle error and return appropriate status code
+    const now = new Date();
+    if (dueDate <= now) {
+      return new Response(
+        JSON.stringify({ error: "due_at must be in the future" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // Example successful response:
-    // return new Response(JSON.stringify({ success: true, task_id: data.id }), {
-    //   status: 200,
-    //   headers: { "Content-Type": "application/json" },
-    // });
+    // Verify application exists and get tenant_id
+    const { data: application, error: appError } = await supabase
+      .from("applications")
+      .select("tenant_id")
+      .eq("id", application_id)
+      .single();
+
+    if (appError || !application) {
+      return new Response(
+        JSON.stringify({ error: "Application not found" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert task
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        application_id,
+        tenant_id: application.tenant_id,
+        type: task_type,
+        due_at,
+        status: "open",
+        title: `${task_type.charAt(0).toUpperCase() + task_type.slice(1)} task`
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Database error:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to create task" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ error: "Not implemented. Please complete this function." }),
-      { status: 501, headers: { "Content-Type": "application/json" } },
+      JSON.stringify({ success: true, task_id: data.id }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 });
