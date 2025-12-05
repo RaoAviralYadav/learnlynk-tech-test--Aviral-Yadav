@@ -170,5 +170,6 @@ In the same webhook handler transaction, update the related application's status
 
 For failed payments, listen to `checkout.session.expired` to mark payment_requests as 'failed' and allow retry attempts. Store all webhook events in a separate stripe_events table for debugging and reconciliation purposes.
 
-Thank You
+Thank You.
+
 Aviral Yadav
