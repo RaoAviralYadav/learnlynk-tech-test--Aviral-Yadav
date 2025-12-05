@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
+import styles from "./today.module.css";
 
 type Task = {
   id: string;
@@ -19,18 +20,22 @@ export default function TodayDashboard() {
     setError(null);
 
     try {
-      // TODO:
-      // - Query tasks that are due today and not completed
-      // - Use supabase.from("tasks").select(...)
-      // - You can do date filtering in SQL or client-side
+      // Get today's date range (start and end of today)
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-      // Example:
-      // const { data, error } = await supabase
-      //   .from("tasks")
-      //   .select("*")
-      //   .eq("status", "open");
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .neq("status", "completed")
+        .gte("due_at", startOfDay.toISOString())
+        .lte("due_at", endOfDay.toISOString())
+        .order("due_at", { ascending: true });
 
-      setTasks([]);
+      if (error) throw error;
+
+      setTasks(data || []);
     } catch (err: any) {
       console.error(err);
       setError("Failed to load tasks");
@@ -41,9 +46,15 @@ export default function TodayDashboard() {
 
   async function markComplete(id: string) {
     try {
-      // TODO:
-      // - Update task.status to 'completed'
-      // - Re-fetch tasks or update state optimistically
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: "completed", updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Optimistically update the UI
+      setTasks((prevTasks) => prevTasks.filter((t) => t.id !== id));
     } catch (err: any) {
       console.error(err);
       alert("Failed to update task");
@@ -55,15 +66,15 @@ export default function TodayDashboard() {
   }, []);
 
   if (loading) return <div>Loading tasks...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  if (error) return <div className={styles["dashboard-error"]}>{error}</div>;
 
   return (
-    <main style={{ padding: "1.5rem" }}>
+    <main className={styles["dashboard-main"]}>
       <h1>Today&apos;s Tasks</h1>
       {tasks.length === 0 && <p>No tasks due today 🎉</p>}
 
       {tasks.length > 0 && (
-        <table>
+        <table className={styles["dashboard-table"]}>
           <thead>
             <tr>
               <th>Type</th>
@@ -76,13 +87,18 @@ export default function TodayDashboard() {
           <tbody>
             {tasks.map((t) => (
               <tr key={t.id}>
-                <td>{t.type}</td>
-                <td>{t.application_id}</td>
+                <td className={styles["task-type-cell"]}>{t.type}</td>
+                <td className={styles["task-app-cell"]}>
+                  {t.application_id.substring(0, 8)}...
+                </td>
                 <td>{new Date(t.due_at).toLocaleString()}</td>
-                <td>{t.status}</td>
+                <td className={styles["task-status-cell"]}>{t.status}</td>
                 <td>
                   {t.status !== "completed" && (
-                    <button onClick={() => markComplete(t.id)}>
+                    <button
+                      onClick={() => markComplete(t.id)}
+                      className={styles["mark-complete-button"]}
+                    >
                       Mark Complete
                     </button>
                   )}

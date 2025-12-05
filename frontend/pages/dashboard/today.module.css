@@ -1,0 +1,56 @@
+.dashboard-error {
+  color: red;
+}
+
+.dashboard-main {
+  padding: 1.5rem;
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.dashboard-table thead tr {
+  border-bottom: 2px solid #ddd;
+  text-align: left;
+}
+
+.dashboard-table th {
+  padding: 0.75rem;
+}
+
+.dashboard-table tbody tr {
+  border-bottom: 1px solid #eee;
+}
+
+.dashboard-table td {
+  padding: 0.75rem;
+}
+
+.task-type-cell {
+  text-transform: capitalize;
+}
+
+.task-app-cell {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.task-status-cell {
+  text-transform: capitalize;
+}
+
+.mark-complete-button {
+  padding: 0.5rem 1rem;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mark-complete-button:hover {
+  background-color: #0051cc;
+}
