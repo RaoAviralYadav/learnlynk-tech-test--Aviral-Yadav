@@ -1,4 +1,4 @@
-// Simple browser-side Supabase client for the test.
+//Simple browser-side Supabase client for the test.
 
 import { createClient } from "@supabase/supabase-js";
 
